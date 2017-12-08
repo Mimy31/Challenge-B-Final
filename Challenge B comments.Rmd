@@ -1,0 +1,375 @@
+---
+title: "Comment on the Challenge B"
+author: "Mimy31 et Juju31"
+date: "4/12/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## TASK 1 ##
+
+Step1 : Predicting house prices in Ames, Iowa
+# ML technique choosen : Random Forest. What is it ?
+# Random Forest is a machine learning (an algorithm), for classification and regression. In this library, there are many classes, which represent many « trees » in this « forest ». We can extract trees from the « forest » to regress our model (here we want to predict house prices in Ames, so we want to regress the price according to many different variables).
+# We can make a classification or a regression with randomForest. Here, we will do a regression.
+
+# For this : we can add, substract, combine, … trees to an ensemble, to see if a class is significant or not in our regression or predictionN.
+# In fact : we can make a prediction of test data using random forest, that is what we want to do : Predicting house prices in Ames.
+# The prediction will depend on which class we add or substract from our model.
+
+Step 2 :  
+#For this step, we will make a linear regression of the training data, using random Forest.
+
+```{r tidyverse, echo = TRUE}
+library(tidyverse)
+library(randomForest)
+library(readr)
+```
+
+# We import Dataset from CSV an choose « train.csv »
+
+```{r train, echo=TRUE}
+set.seed(1)
+train <- read_csv("~/rprog/CHALLENGES/Challenge A/train.csv")
+```
+
+# We can have a look on the dataset, running the command and change all character as factors.
+
+```{r train1, echo=TRUE}
+dim(train)
+colnames(train)
+sapply(train,class)
+head(train)
+```
+
+```{r train2, echo=TRUE}
+train[sapply(train,is.character)]<-lapply(train[sapply(train,is.character)], as.factor)
+```
+
+#We substract all missing values (NA) using summarise and filter functions
+
+```{r remove var train, echo=TRUE}
+remove.vars <- train %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 100) %>% select(feature) %>% unlist
+train <- train %>% select(-one_of(remove.vars))
+train %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 0)
+train <- train %>% filter(is.na(GarageType) == FALSE, is.na(MasVnrType) == FALSE, is.na(BsmtFinType2) == FALSE, is.na(BsmtExposure) == FALSE, is.na(Electrical) == FALSE)
+train %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 0)
+```
+
+## We, now, have no NA in our dataset.
+
+```{r fit, echo=TRUE}
+fit <-randomForest(as.factor(SalePrice) ~ MSZoning+LotArea+Neighborhood+OverallQual+YearBuilt+YearRemodAdd,data=train,importance=TRUE,ntree=10)
+```
+
+Step3 : 
+# We import dataset test and select only important parameters and subset them. Then we will substract all the missing values
+
+```{r test1, echo=TRUE}
+library(readr)
+test <- read_csv("~/rprog/CHALLENGES/Challenge A/test.csv")
+test[sapply(test, is.character)] <- lapply(test[sapply(test, is.character)], as.factor)
+sapply(test,class)
+```
+
+```{r test2, echo=TRUE}
+test[sapply(test,is.character)]<-lapply(test[sapply(test,is.character)], as.factor)
+```
+
+```{r testSubset, include = FALSE}
+TestSubset <- subset(test, select = c("Id","MSZoning","LotArea","Neighborhood","OverallQual","YearBuilt","YearRemodAdd"))
+summary(TestSubset)
+dim(TestSubset)
+sapply(TestSubset,levels)
+DataTest <- TestSubset
+dim(DataTest)
+```
+
+```{r remove var test, echo=TRUE}
+remove.vars <- test %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 100) %>% select(feature) %>% unlist
+test <- test %>% select(-one_of(remove.vars))
+test %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 0)
+test <- test %>% filter(is.na(GarageType) == FALSE, is.na(MasVnrType) == FALSE, is.na(BsmtFinType2) == FALSE, is.na(BsmtExposure) == FALSE, is.na(Electrical) == FALSE)
+test %>% summarise_all(.funs = funs(sum(is.na(.)))) %>% gather(key = "feature", value = "missing.observations") %>% filter(missing.observations > 0)
+```
+
+
+```{r model1, echo=TRUE}
+model<-lm(SalePrice~MSZoning+LotArea+Neighborhood+OverallQual+YearBuilt+YearRemodAdd,data=train, na.action (na.omit (train)))
+```
+
+## Make prediction of the model created using model (linear regression)
+
+```{r model2, echo=TRUE}
+prediction <- data.frame(Id = test$Id, SalePrice_predict = predict(model, test, type="response"))
+summary(prediction)
+```
+
+For the linear regression, we obtain the min, median, max, … 
+
+## Prediction of a linear regression using random forest
+
+```{r model3, echo=TRUE}
+Prediction2 <- (predict(fit, test, type="response"))
+summary(Prediction2)
+```
+## With the ML technique of random forests we have categorical values, for example 4 houses have a price of 165 000 dollars, whereas with the linear regression we have continuous values with a price mean of houses in Ames, Iowa of 184 100 dollars. 
+
+## TASK 2 ##
+
+## We copy the code we used in Task 2A in challenge A. 
+
+```{r step3, echo = FALSE}
+rm(list = ls())
+# Simulating an overfit
+library(tidyverse)
+library(np)
+library(caret)
+# True model : y = x^3 + epsilon
+set.seed(1) # very important for replication
+Nsim <- 150 # Nsim = number of simulations
+b <- c(0,1) #
+x0 <- rep(1, Nsim) 
+x1 <- rnorm(n = Nsim) # x1 is x from the question, I draw here a vector of size Nsim of x from a normal N(0,1)
+
+X <- cbind(x0, x1^3) # this is X such that y = Xb + epsilon, so X = 0 + x^3 = x0 + x1^3 
+# x0 is a vector of 0, x1 is a random vector of size Nsim drawn from normal N(0,1)
+y.true <- X %*% b
+
+eps <- rnorm(n = Nsim) # draw a vector of size Nsim from normal N(0,1), this is epsilon
+y <- X %*% b + eps # the simulated y is then computed following the true model
+
+df <- tbl_df(y[,1]) %>% rename(y = value) %>% bind_cols(tbl_df(x1)) %>% rename(x = value) %>% bind_cols(tbl_df(y.true[,1])) %>% rename(y.true = value) # the previous y and x are matrix and vector, I transform them into a dataframe to use the tidyverse
+```
+
+```{r overfit-step6-sol, echo = TRUE, include = FALSE}
+class(y)
+training.index <- createDataPartition(y = y, times = 1, p = 0.8) #index of the rows I want to keep
+df <- df %>% mutate(which.data = ifelse(1:n() %in% training.index$Resample1, "training", "test")) # I create a new column in df (thus the function mutate) that is categorical and is equal to training if the index of the row (i compute through 1:n()) is in the vector training.index; remember training.index contains the number of the rows that are randomly selected into the training set.
+
+training <- df %>% filter(which.data == "training") 
+#here we subset the table into a training sub-table and a test sub-table
+test <- df %>% filter(which.data == "test")
+```
+
+```{r overfit-step7-sol, echo = TRUE, include = FALSE}
+# Train linear model y ~ x on training
+lm.fit <- lm(y ~ x, data = training) #regress y on x only on training data
+summary(lm.fit)
+```
+
+```{r overfit-step8-sol, echo = TRUE, include = FALSE}
+training <- training %>% mutate(y.lm = predict(object = lm.fit))
+```
+
+Step 1 : 
+# We are estimating a low-flexibility local linear model on the training data using the npreg function and a bandwidth of 0.5. We call this model "ll.fit.lowflex". 
+# We found a R-squared of 0.854 and a Residual standard error of 1.0854. 
+
+``` {r low-flexibility linear model4, include = TRUE, include = TRUE}
+library(np)
+ll.fit.lowflex <- npreg (y ~ x, bws = 0.5, data = training, regtype = "ll")
+summary(ll.fit.lowflex)
+```
+
+Step 2 : 
+# We are estimating a high-flexibility local linear model on the training data using the npreg function and a bandwidth of 0.01. We call this model "ll.fit.highflex". 
+# We found a R-squared of 0.968 and a residual standard error of 0.507. We can see that with a lower bandwidth the R-squared is higher and the residual standard error is lower. This new model is better than the low-flexibility local linear model, more precise. 
+
+``` {r high-flexibility linear model5, include = TRUE}
+ll.fit.highflex <- npreg (y ~ x, bws = 0.01, data = training, regtype = "ll")
+summary(ll.fit.highflex)
+```
+
+Step 3 : 
+# We plot the scatterplot of x-y, along the predictions of the two local linear models we estimated in the previous questions. The blue line corresponds to the predictions of ll.fit.highflex and the red one to the predictions of ll.fit.lowflex. The black line and points corresponds to the values of the training data. 
+
+``` {r plot training, include = TRUE}
+training <- training %>% mutate(y.ll = predict(object = ll.fit.highflex))
+training <- training %>% mutate(y.lll = predict(object = ll.fit.lowflex))
+ggplot(training) + ggtitle("Figure 1: Step 3 - Predictions of ll.fit.lowflex and ll.fit.highflex on training data") + geom_point(mapping = aes(x = x, y = y)) + 
+  geom_line(mapping = aes(x = x, y = y.true)) + 
+  geom_line(mapping = aes(x = x, y = y.ll), color = "blue") +
+  geom_line(mapping = aes(x = x, y = y.lll), color = "red")
+```
+
+Step 4 : 
+# We can compare the blue and the red lines to see which predictions are more variable and have the least bias. 
+# The predictions of the high flexibility local linear model (blue line) are the more variable ones and have the least bias. The blue line joins all the black points, so that the predictions are corresponding the the values of the training data, whereas, the red line doesn't match all the black point. 
+
+Step 5 : 
+# We are estimating the y.ll.highflex model and the y.ll.lowflex model on the previous models ll.fit.highflex and ll.fit.lowflex on the test data instead of the training data using the function mutate. 
+
+# We plot then the scatterplot of x-y, along the predictions of the two new local linear models we estimated. The blue line corresponds to the predictions of y.ll.highflex and the red one to the predictions of y.ll.lowflex. The black line and points corresponds to the values of the test data. 
+
+``` {r plot on data test3, include = TRUE}
+test <- test %>% mutate(y.ll.lowflex = predict(object = ll.fit.lowflex, newdata = test), y.ll.highflex = predict(object = ll.fit.highflex, newdata = test))
+
+ggplot(test) + ggtitle("Figure 2: Step 5 - Predictions of ll.fit.lowflex and ll.fit.highflex on test data") + 
+  geom_point(mapping = aes(x = x, y = y)) + 
+  geom_line(mapping = aes(x = x, y = y.true)) + 
+  geom_line(mapping = aes(x = x, y = y.ll.highflex), color = "blue") +
+  geom_line(mapping = aes(x = x, y = y.ll.lowflex), color = "red")
+```
+
+Step 6 :
+# We create a vector of bandwidth going from 0.01 to 0.5 with a step of 0.001 using the function seq. We call it "bdw".
+
+``` {r vector bandwidth, include = TRUE}
+bdw <- seq(0.01, 0.5, by = 0.001)
+```
+
+Step 7 : 
+# We are estimating a local linear model y ~ x on the training data with each bandwidth using the function lapply and our new function vector "bdw".
+
+``` {r linear model with each bandwith, include = TRUE}
+ll.fit.flex <- lapply(X = bdw, FUN = function(bdw) {npreg(y~x, data =training, method = "ll", bws = bdw)})
+```
+
+Step 8 :
+# To compute for each bandwidth the MSE on the training data we create a new function "mse.training" which calculate the MSE of the model fit.model. For this we use the equation of the MSE : mean((y - predictions)^2). Then we list all the MSE of the ll.fit.flex model in a table. 
+
+``` {r MSE on training data, include = TRUE}
+mse.training <- function(fit.model){
+  predictions <- predict(object = fit.model, newdata = training)
+  training %>% mutate(squared.error = (y - predictions)^2) %>% summarize(mse = mean(squared.error))
+}
+mse.training.results <- unlist(lapply(X = ll.fit.flex, FUN = mse.training))
+mse.training.results
+```
+
+Step 9 : 
+# We do the same as in step 8 on the test data instead of the training data. 
+
+``` {r MSE on test data, include = TRUE}
+mse.test <- function(fit.model){
+  predictions <- predict(object = fit.model, newdata = test)
+  test %>% mutate(squared.error = (y - predictions)^2) %>% summarize(mse = mean(squared.error))
+}
+mse.test.results <- unlist(lapply(X = ll.fit.flex, FUN = mse.test))
+mse.test.results
+```
+
+Step 10 : 
+# We draw on the same plot how the MSE on training data, and test data, change, when the bandwidth increases using the function tbl_df. The blue line corresponds to the MSE on training data and the orange one corresponds to the MSE on test data. 
+
+``` {r plot, include = TRUE}
+mse.df <- tbl_df(data.frame(bandwidth = bdw, mse.train = mse.training.results, mse.test = mse.test.results))
+mse.df
+
+ggplot(mse.df) + ggtitle("Figure 3: Step 10 - Change in the MSE on training and test datasets") +  
+  geom_line(mapping = aes(x = bdw, y = mse.train), color = "blue") +
+  geom_line(mapping = aes(x = bdw, y = mse.test), color = "orange")
+```
+
+# With a bandwith of near 0, the MSE on training data is equal to 0 whereas the MSE on test data is equal to 2.5. Then, the blue line sharply increases and the orange one sharply decreases. The intersection of both lines happens with a bandwidth of 1.4. After that, they are increasing until reaching a MSE of 2.2 for the blue line and 1.4 for the orange line with a bandwidth of 0.5. 
+
+# We conclude that a small bandwidth implies low means squared with the data set training because it has many observations. The predictions are then more realistic and close to the real model. 
+Whereas small bandwidth implies high means squared with the data set test because it has less observations. The predictions are then less realistic and far from the real model.
+
+## TASK3 ##
+
+Step1 :
+## We import the CNIL and SIREN dataset
+
+```{r model5, echo=TRUE}
+load.libraries <- c('data.table', 'knitr', 'ggplot2')
+install.lib <- load.libraries[!load.libraries %in% installed.packages()]
+install.packages(dir.exists)
+for(libs in install.lib) install.packages(libs, dependencies = TRUE, repos="https://cloud.libraries", require, character=TRUE)
+sapply(load.libraries, require, character = TRUE)
+```
+
+```{r model6, echo=TRUE}
+library(readr)
+
+OpenCNIL_Organismes_avec_CIL_VD_20171115 <- read_csv(file = "~/rprog/CHALLENGES/Challenge B/OpenCNIL_Organismes_avec_CIL_VD_20171115.csv")
+sirc_17804_9075_14211_2017333_E_Q_20171130_022745750 <- read_csv("~/rprog/CHALLENGES/Challenge B/sirc-17804_9075_14211_2017333_E_Q_20171130_022745750.csv")
+View(OpenCNIL_Organismes_avec_CIL_VD_20171115)
+```
+
+# When we import the CNIL dataset from csv, we can see that there is only one column for all the informations : We try to open it as an excel file
+
+```{r CNIL1, echo=TRUE}
+library(readxl)
+OpenCNIL_Organismes_avec_CIL_VD_20171115_XLS <- read_excel("~/rprog/CHALLENGES/Challenge B/OpenCNIL_Organismes_avec_CIL_VD_20171115_XLS.xls")
+View(OpenCNIL_Organismes_avec_CIL_VD_20171115_XLS)
+```
+
+#Let's rename the data
+
+```{r CNIL1b, echo=TRUE}
+CNIL1 <- OpenCNIL_Organismes_avec_CIL_VD_20171115_XLS
+View(CNIL1)
+```
+
+Step 2 : 
+
+```{r CNIL1c, echo=TRUE}
+colnames(CNIL1) 
+```
+# This command allow us to see the name of the different columns of CNIL1
+
+```{r CNIL1d, echo=TRUE}
+View(CNIL1)
+```
+# we can see in the table that sometimes the Code postal numbers don't have 5 figures : we need to take only the "Code Postal" that contains 5 figures.
+
+```{r CNIL1_SUB1, echo=TRUE}
+CNIL1_SUB1 <- subset(CNIL1, nchar(CNIL1$Code_Postal) > 4,)
+```
+# We create a first subset containing only the numbers with more than 4 figures 
+
+```{r CNIL1_SUB2, echo=TRUE}
+CNIL1_SUB2 <- subset(CNIL1_SUB1, nchar(CNIL1_SUB1$Code_Postal) < 6,)
+```
+# We create a second subset containing only the numbers with less than 6 figures from CNIl1_SUB1 so that the Code Postal of CNIL1_SUB2 contains the right number of figures
+
+```{r CNIL1_SUB2b, echo=TRUE}
+DEPARTMENT <- sub ("^(\\d{2}).*$","\\1",CNIL1_SUB2$Code_Postal)
+DEPT <- subset(DEPARTMENT, nchar(DEPARTMENT) < 3,)
+```
+
+# This command allow us to take only the first two digits of the Code Postal 
+# We can now create a table with the number of organizations that has nominated a CNIL per department.
+
+```{r CNIL1_SUB2c, echo=TRUE}
+nicetable <- data.frame(table(unlist(DEPT)))
+colnames(nicetable)
+colnames(nicetable)[colnames(nicetable)=="Var1"] <- "Department"
+colnames(nicetable)[colnames(nicetable)=="Freq"] <- "Number of organizations"
+
+kable(nicetable)
+```
+
+
+Step 3 : We merge the information from the SIREN dataset into the CNIL data
+
+# To merge the CNIL dataframe and the SIREN data we could have used the command merge but it would have taken us too much time
+
+
